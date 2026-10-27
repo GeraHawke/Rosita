@@ -9,32 +9,61 @@ import {
   Image,
   Animated,
   ActivityIndicator,
+  Button, // <-- IMPORTANTE: Button debe importarse de react-native
 } from 'react-native';
 
-export default function Home() {
-  // Estados de los campos
+import { useRouter } from 'expo-router';
+
+/**
+ * Pantalla de Login (Index)
+ * - Validación de email con regex
+ * - Validación de contraseña (longitud, mayúsculas, minúsculas, carácter especial)
+ * - Animación de borde oscilante entre rojo y azul mientras valida
+ * - Borde fijo en rojo (error) o verde (éxito)
+ * - Botón de Registro que navega a /register
+ */
+export default function Index() {
+  // ========== NAVEGACIÓN ==========
+  const router = useRouter();
+
+  /** Navega a la pantalla de registro */
+  const onRegister = () => {
+    router.push({
+      pathname: '/register',
+    });
+  };
+
+  // ========== ESTADOS DE LOS CAMPOS ==========
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Estados de error (texto que aparece debajo)
+  // ========== ESTADOS DE ERROR (texto debajo del input) ==========
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  // Estados visuales de validación
+  // ========== ESTADOS VISUALES DE VALIDACIÓN ==========
+  // 'idle' | 'checking' | 'success' | 'error'
   const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
 
-  // Animaciones de borde
+  // ========== ANIMACIONES DE BORDE ==========
   const emailBorderAnim = useRef(new Animated.Value(0)).current;
   const passwordBorderAnim = useRef(new Animated.Value(0)).current;
 
-  // Colores
-  const ORANGE = '#C95732';
-  const BLUE = '#4FA9C6';
-  const RED = '#D61F3A';
-  const GREEN = '#2E7D32';
+  // ========== COLORES ==========
+  const ORANGE = '#C95732'; // color inicial / idle
+  const BLUE = '#4FA9C6';   // color de oscilación
+  const RED = '#D61F3A';    // color de error + oscilación
+  const GREEN = '#2E7D32';  // color de éxito
 
   // ========== VALIDACIONES ==========
+
+  /**
+   * Valida el email:
+   * - No vacío
+   * - Formato correcto con regex
+   * @returns mensaje de error o cadena vacía si es válido
+   */
   const validateEmail = (value: string): string => {
     if (!value.trim()) return 'El email no puede estar vacío';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,6 +71,15 @@ export default function Home() {
     return '';
   };
 
+  /**
+   * Valida la contraseña:
+   * - No vacía
+   * - Mínimo 8 caracteres
+   * - Al menos una mayúscula
+   * - Al menos una minúscula
+   * - Al menos un carácter especial
+   * @returns mensaje de error o cadena vacía si es válido
+   */
   const validatePassword = (value: string): string => {
     if (!value) return 'La contraseña no puede estar vacía';
     if (value.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
@@ -53,30 +91,41 @@ export default function Home() {
     return '';
   };
 
-  // Animación de borde
+  // ========== ANIMACIÓN DE BORDE ==========
+
+  /**
+   * Inicia la animación de oscilación del borde.
+   * Oscila entre rojo (#D61F3A) y azul (#4FA9C6).
+   */
   const animateBorder = (animValue: Animated.Value, duration = 900) => {
     animValue.setValue(0);
     return Animated.timing(animValue, {
       toValue: 1,
       duration,
-      useNativeDriver: false,
+      useNativeDriver: false, // necesario porque borderColor no soporta native driver
     }).start();
   };
 
-  // Color del borde según estado
+  /**
+   * Devuelve el color del borde según el estado actual.
+   * - error  → rojo fijo
+   * - success → verde fijo
+   * - checking → interpolación rojo ↔ azul (oscilación)
+   * - idle → naranja
+   */
   const getBorderColor = (animValue: Animated.Value, status: string) => {
     if (status === 'error') return RED;
     if (status === 'success') return GREEN;
     if (status === 'checking') {
       return animValue.interpolate({
         inputRange: [0, 0.5, 1],
-        outputRange: [ORANGE, BLUE, ORANGE],
+        outputRange: [RED, BLUE, RED], // oscila entre rojo y azul
       });
     }
     return ORANGE;
   };
 
-  // Limpiar todo
+  // ========== LIMPIAR FORMULARIO ==========
   const clearForm = () => {
     setEmail('');
     setPassword('');
@@ -86,7 +135,7 @@ export default function Home() {
     setPasswordStatus('idle');
   };
 
-  // ========== LÓGICA DEL BOTÓN ==========
+  // ========== LÓGICA DEL BOTÓN LOGIN ==========
   const handleLogin = async () => {
     // Limpiar estados de error anteriores
     setEmailError('');
@@ -99,6 +148,7 @@ export default function Home() {
     setEmailStatus('checking');
     animateBorder(emailBorderAnim);
 
+    // Simula tiempo de validación (animación visible)
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     if (emailMsg) {
@@ -135,7 +185,7 @@ export default function Home() {
         [
           {
             text: 'OK',
-            onPress: clearForm, // ← limpia los campos al cerrar el alert
+            onPress: clearForm,
           },
         ],
         { cancelable: false }
@@ -143,104 +193,128 @@ export default function Home() {
     }, 400);
   };
 
+  // ========== RENDER ==========
   return (
-    <View style={styles.container}>
-      {/* ========== IMAGEN ========== */}
-      {/* Cambia la ruta según donde tengas el archivo */}
+    <View style={styles.container} testID="login-screen">
+      {/* ========== LOGO ========== */}
       <Image
         source={require('./bluetech.png')}
         style={styles.logo}
         resizeMode="contain"
+        testID="login-logo"
       />
 
-      {/* ========== EMAIL ========== */}
+      {/* ========== CAMPO EMAIL ========== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Email</Text>
-        <View style={styles.inputRow}>
-          <Animated.View
-            style={[
-              styles.inputWrapper,
-              { borderColor: getBorderColor(emailBorderAnim, emailStatus) },
-            ]}
-          >
-            <TextInput
-              style={styles.input}
-              placeholder="ejemplo@correo.com"
-              placeholderTextColor="#999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (emailStatus !== 'idle') {
-                  setEmailStatus('idle');
-                  setEmailError('');
-                }
-              }}
-            />
-          </Animated.View>
-
-          {/* Contenedor fijo para el icono → evita que la caja se encoja */}
-          <View style={styles.iconContainer}>
-            {emailStatus === 'checking' && (
-              <ActivityIndicator size="small" color={BLUE} />
-            )}
-            {emailStatus === 'success' && (
-              <Text style={[styles.checkIcon, { color: GREEN }]}>✓</Text>
-            )}
-          </View>
-        </View>
-        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        <Animated.View
+          style={[
+            styles.inputWrapper,
+            { borderColor: getBorderColor(emailBorderAnim, emailStatus) },
+          ]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#999"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              // Si el usuario vuelve a escribir, reseteamos el estado visual
+              if (emailStatus !== 'idle') {
+                setEmailStatus('idle');
+                setEmailError('');
+              }
+            }}
+            testID="login-email-input"
+          />
+        </Animated.View>
+        {/* Indicador de carga mientras valida (sin check verde) */}
+        {emailStatus === 'checking' && (
+          <ActivityIndicator
+            size="small"
+            color={BLUE}
+            style={styles.loader}
+            testID="login-email-loader"
+          />
+        )}
+        {emailError ? (
+          <Text style={styles.errorText} testID="login-email-error">
+            {emailError}
+          </Text>
+        ) : null}
       </View>
 
-      {/* ========== CONTRASEÑA ========== */}
+      {/* ========== CAMPO CONTRASEÑA ========== */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.inputRow}>
-          <Animated.View
-            style={[
-              styles.inputWrapper,
-              { borderColor: getBorderColor(passwordBorderAnim, passwordStatus) },
-            ]}
-          >
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#999"
-              secureTextEntry={true}
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (passwordStatus !== 'idle') {
-                  setPasswordStatus('idle');
-                  setPasswordError('');
-                }
-              }}
-            />
-          </Animated.View>
-
-          {/* Contenedor fijo para el icono → evita que la caja se encoja */}
-          <View style={styles.iconContainer}>
-            {passwordStatus === 'checking' && (
-              <ActivityIndicator size="small" color={BLUE} />
-            )}
-            {passwordStatus === 'success' && (
-              <Text style={[styles.checkIcon, { color: GREEN }]}>✓</Text>
-            )}
-          </View>
-        </View>
-        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+        <Animated.View
+          style={[
+            styles.inputWrapper,
+            { borderColor: getBorderColor(passwordBorderAnim, passwordStatus) },
+          ]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Contraseña"
+            placeholderTextColor="#999"
+            secureTextEntry={true}
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (passwordStatus !== 'idle') {
+                setPasswordStatus('idle');
+                setPasswordError('');
+              }
+            }}
+            testID="login-password-input"
+          />
+        </Animated.View>
+        {passwordStatus === 'checking' && (
+          <ActivityIndicator
+            size="small"
+            color={BLUE}
+            style={styles.loader}
+            testID="login-password-loader"
+          />
+        )}
+        {passwordError ? (
+          <Text style={styles.errorText} testID="login-password-error">
+            {passwordError}
+          </Text>
+        ) : null}
       </View>
 
-      {/* ========== BOTÓN ========== */}
-      <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.8}>
-        <Text style={styles.buttonText}>LOG IN</Text>
+      {/* ========== BOTÓN INICIAR SESIÓN ========== */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        activeOpacity={0.8}
+        testID="login-submit-button"
+      >
+        <Text style={styles.buttonText}>Iniciar Sesión</Text>
       </TouchableOpacity>
+
+      {/* ========== BOTÓN REGISTRO ========== */}
+      {/* Usamos el componente Button de react-native (como en la captura de la práctica) */}
+      <View style={styles.registerButtonContainer}>
+        <Button
+          title="Registro"
+          onPress={onRegister}
+          color="#6B2D5C"
+          testID="login-register-button"
+        />
+      </View>
     </View>
   );
 }
 
+// ========== ESTILOS ==========
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -250,8 +324,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logo: {
-    width: 240,        // ← más grande (ajusta si quieres aún más)
-    height: 140,       // ← más grande
+    width: 240,
+    height: 140,
     marginBottom: 36,
   },
   fieldContainer: {
@@ -266,12 +340,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginLeft: 4,
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  // Wrapper del input: mismo ancho para todos, centrado
   inputWrapper: {
-    flex: 1,
+    width: '100%',
     borderWidth: 2,
     borderRadius: 8,
     borderColor: '#C95732',
@@ -283,17 +354,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0A0A0F',
   },
-  // Espacio fijo reservado para el icono (así la caja nunca se encoje)
-  iconContainer: {
-    width: 32,
-    height: 32,
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  // Loader centrado debajo del input (sin ocupar espacio al lado)
+  loader: {
+    marginTop: 6,
+    alignSelf: 'center',
   },
   errorText: {
     color: '#D61F3A',
@@ -321,5 +385,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  registerButtonContainer: {
+    width: '100%',
+    maxWidth: 340,
+    marginTop: 16,
   },
 });
