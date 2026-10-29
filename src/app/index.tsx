@@ -33,6 +33,13 @@ export default function Index() {
     });
   };
 
+  /** Navega a la pantalla de home */
+  const onHome = () => {
+    router.push({
+      pathname: '/home',
+    });
+  };
+
   // ========== ESTADOS DE LOS CAMPOS ==========
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
