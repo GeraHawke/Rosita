@@ -186,17 +186,8 @@ export default function Index() {
 
     // Todo correcto → Alert de éxito y al cerrar se limpia el formulario
     setTimeout(() => {
-      Alert.alert(
-        'LOGIN EXITOSO',
-        'Bienvenido. Has iniciado sesión correctamente.',
-        [
-          {
-            text: 'OK',
-            onPress: clearForm,
-          },
-        ],
-        { cancelable: false }
-      );
+      clearForm();
+      router.push({ pathname: '/home' });
     }, 400);
   };
 
